@@ -18,6 +18,7 @@
 
 #include <deal.II/grid/grid_in.h>
 #include <deal.II/grid/grid_tools.h>
+#include <deal.II/grid/grid_generator.h>
 
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/solver_gmres.h>
@@ -38,13 +39,10 @@
 
 using namespace dealii;
 
-// Class implementing a solver for the Stokes problem in the form: 
-// sigma * u - nu * delta(u) + grad(p) = f
-// div(u) = 0
 class Stokes
 {
     public:
-        static constexpr unsigned int dim = 3;
+        static constexpr unsigned int dim = 2;
 
         using Value = std::function<double(const Point<dim> &p)>; 
         using VectorField = std::function<Tensor<1, dim>(const Point<dim> &p)>; 
@@ -54,43 +52,18 @@ class Stokes
             public:
                 void vmult(TrilinosWrappers::MPI::BlockVector &dst, const TrilinosWrappers::MPI::BlockVector &src) const { dst = src; }
         };
+        
         // Constructor for self generated mesh
         Stokes
         (
-            const unsigned int &N_el_,
+            const unsigned int &n_refinements_,
             const unsigned int &degree_velocity_,
             const unsigned int &degree_pressure_,
             const Value &sigma_, 
             const Value &nu_, 
             const VectorField &f_
         )
-        : selfMesh(true)
-        , N_el(N_el_)
-        , mesh_file_name("")
-        , degree_velocity(degree_velocity_)
-        , degree_pressure(degree_pressure_)
-        , sigma(sigma_)
-        , nu(nu_)
-        , f(f_)
-        , mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
-        , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
-        , mesh(MPI_COMM_WORLD)
-        , pcout(std::cout, mpi_rank == 0)
-        {}
-
-        // Constructor for externally generated mesh
-        Stokes
-        (
-            const std::string  &mesh_file_name_,
-            const unsigned int &degree_velocity_,
-            const unsigned int &degree_pressure_,
-            const Value &sigma_,
-            const Value &nu_, 
-            const VectorField &f_
-        )
-        : selfMesh(false)
-        , N_el(0)
-        , mesh_file_name(mesh_file_name_)
+        : n_refinements(n_refinements_)
         , degree_velocity(degree_velocity_)
         , degree_pressure(degree_pressure_)
         , sigma(sigma_)
@@ -111,9 +84,7 @@ class Stokes
         std::map<types::boundary_id, const Function<dim> *> dirichlet;
         std::map<types::boundary_id, const Function<dim> *> neumann;
     protected:
-        bool selfMesh; 
-        const unsigned int N_el; 
-        const std::string mesh_file_name;
+        const unsigned int n_refinements; 
         const unsigned int degree_velocity;
         const unsigned int degree_pressure;
         const Value sigma; 

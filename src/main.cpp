@@ -2,10 +2,6 @@
 #include "preconditioners/BlockTriangular.hpp"
 #include <ctime>
 
-/**
- * Test case: Laboratory session 7
- */
-
 static constexpr unsigned int dim = Stokes::dim; 
 
 using Value = std::function<double(const Point<dim> &p)>; 
@@ -19,13 +15,16 @@ class Inlet : public Function<dim>
 
         virtual void vector_value(const Point<dim> &p, Vector<double> &values) const override
         {
-            values[0] = -1 * alpha * p[1] * (2 - p[1]) * (1 - p[2]) * (2 - p[2]);
+            const double Umax = 1.5; // maximum velocity
+            const double H = 1.0; // Half-width of the channel 
 
-            for (unsigned int i = 1; i < dim + 1; ++i)
-                values[i] = 0.0;
+            double y = p[1];
+            values[0] = Umax * (1.0 - (y * y) / (H * H)); // u_x
+            
+            for (unsigned int i = 1; i < dim; ++i) values[i] = 0.0; // u_y = u_z = 0.0
+            
+            values[dim] = 0.0; // Pressure
         }
-    protected: 
-        constexpr static double alpha = 1.0; 
 }; 
 
 class Neumann : public Function<dim> 

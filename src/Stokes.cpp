@@ -5,24 +5,19 @@ void Stokes::setup()
     // Create the mesh.
     {
         pcout << "Initializing the mesh" << std::endl;
-        if(selfMesh)
-        {
+        Triangulation<dim> mesh_serial;
+        GridGenerator::channel_with_cylinder(mesh_serial, 0.03, 2, 2.0, true); 
+        mesh_serial.refine_global(n_refinements);
 
-        }
-        else
-        {
-            Triangulation<dim> mesh_serial;
+        GridIn<dim> grid_in;
+        grid_in.attach_triangulation(mesh_serial);
 
-            GridIn<dim> grid_in;
-            grid_in.attach_triangulation(mesh_serial);
+        std::ifstream mesh_file("mesh_" + n_refinements + ".msh");
+        grid_in.read_msh(mesh_file);
 
-            std::ifstream mesh_file(mesh_file_name);
-            grid_in.read_msh(mesh_file);
-
-            GridTools::partition_triangulation(mpi_size, mesh_serial);
-            const auto construction_data = TriangulationDescription::Utilities::create_description_from_triangulation(mesh_serial, MPI_COMM_WORLD);
-            mesh.create_triangulation(construction_data);
-        }
+        GridTools::partition_triangulation(mpi_size, mesh_serial);
+        const auto construction_data = TriangulationDescription::Utilities::create_description_from_triangulation(mesh_serial, MPI_COMM_WORLD);
+        mesh.create_triangulation(construction_data);
 
         pcout << "  Number of elements = " << mesh.n_global_active_cells() << std::endl;
     }
