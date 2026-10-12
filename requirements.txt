@@ -1,0 +1,3 @@
+# Versions compatible with the numpy/scipy of the mk modules (scipy 1.7 requires numpy<1.23)
+matplotlib<3.8
+numpy<1.23
