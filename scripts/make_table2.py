@@ -15,7 +15,7 @@ Usage:
     python3 scripts/make_table2.py build/results.csv
     python3 scripts/make_table2.py build/results.csv --theta 0.24 0.48 0.72
     python3 scripts/make_table2.py build/results.csv --latex table2.tex
-    python3 scripts/make_table2.py build/results.csv --theta 0.24 0.48 0.72 --png table2.png
+    python3 scripts/make_table2.py build/results.csv --theta 0.24 0.48 0.72 --png build/table2.png
     python3 scripts/make_table2.py build/results.csv --png-dir tables
 
 The PNG images (--png, --png-dir) need matplotlib.

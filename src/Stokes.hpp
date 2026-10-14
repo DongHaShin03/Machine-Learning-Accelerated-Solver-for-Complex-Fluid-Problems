@@ -84,11 +84,7 @@ class Stokes
 
         void setup();
         void assemble();
-        // The matrix does not depend on theta: assemble once, solve for each theta.
         SolverResult solve(const double theta, const unsigned int n_repetitions = 1);
-        // Approximate convergence factor of the last solve (paper, Sec. 5):
-        //   rho^(k) = (||r^(k)|| / ||r^(0)||)^(1/k),   rho = rho^(N_it),
-        // with r^(k) = b - K x^(k) and the euclidean norm. Without argument it returns rho.
         double compute_convergence_factor(const unsigned int k = numbers::invalid_unsigned_int) const;
         void output(const std::string &output_file_name = "output-stokes") const;
 

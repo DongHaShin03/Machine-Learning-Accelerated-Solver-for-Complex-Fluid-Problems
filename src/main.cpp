@@ -28,7 +28,7 @@ class Inlet : public Function<dim>
         const double U_max;
 };
 
-// Usage: ./stokes [max_refinement]   (default 5, as in the paper)
+// Usage: ./stokes [max_refinement] [n_repetitions]  (default 5, as in the paper)
 int main(int argc, char *argv[])
 {
     Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     const unsigned int degree_velocity = 2;
     const unsigned int degree_pressure = 1;
 
-    // Dataset of the paper (Sec. 6.5): h = 0.14 / 2^i with i = 0, ..., 5.
+    // Dataset (Section 6.5)
     const unsigned int max_refinement = (argc > 1) ? std::stoul(argv[1]) : 5;
     const std::vector<double> nu_values    = {0.001, 0.1, 10};
     const std::vector<double> U_max_values = {0.00001, 0.001, 0.1, 10};
@@ -53,10 +53,10 @@ int main(int argc, char *argv[])
     // Solution written to file only for this theta.
     const double theta_output = 0.25;
 
-    // Repetitions of each solve to average the timings (Sec. 5.3); rho does not change.
-    const unsigned int n_repetitions = 1;
+    // Repetitions of each solve to average the timings (Sec. 5.3); 
+    const unsigned int n_repetitions = (argc > 2) ? std::stoul(argv[2]) : 1;
 
-    // Forcing term = 0 
+    // Forcing term f = 0 
     const auto f = [](const Point<dim> &) { return Tensor<1, dim>(); };
 
     std::ofstream csv;
@@ -91,8 +91,6 @@ int main(int argc, char *argv[])
                 for (const double theta : theta_values)
                 {
                     const Stokes::SolverResult result = problem.solve(theta, n_repetitions);
-
-                    // Approximate convergence factor rho = (||r^(N_it)|| / ||r^(0)||)^(1/N_it) (Sec. 5)
                     const double rho = problem.compute_convergence_factor();
 
                     if (is_root)

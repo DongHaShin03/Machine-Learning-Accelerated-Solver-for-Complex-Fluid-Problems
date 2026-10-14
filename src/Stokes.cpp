@@ -367,9 +367,6 @@ Stokes::SolverResult Stokes::solve(const double theta, const unsigned int n_repe
 
 double Stokes::compute_convergence_factor(const unsigned int k) const
 {
-    AssertThrow(n_iterations > 0 && residual_history.size() == n_iterations + 1,
-                ExcMessage("Call solve() before compute_convergence_factor()."));
-
     // rho = rho^(N_it) by default
     const unsigned int step = (k == numbers::invalid_unsigned_int) ? n_iterations : k;
     AssertThrow(step >= 1 && step <= n_iterations, ExcIndexRange(step, 1, n_iterations + 1));
