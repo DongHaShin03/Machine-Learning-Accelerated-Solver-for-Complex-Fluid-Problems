@@ -28,7 +28,7 @@ class Inlet : public Function<dim>
         const double U_max;
 };
 
-// Usage: ./stokes [max_refinement] [n_repetitions]  (default 5, as in the paper)
+// Usage: ./stokes [max_refinement] [n_repetitions] 
 int main(int argc, char *argv[])
 {
     Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
     const unsigned int degree_pressure = 1;
 
     // Dataset (Section 6.5)
-    const unsigned int max_refinement = (argc > 1) ? std::stoul(argv[1]) : 5;
+    const unsigned int min_refinement = (argc > 1) ? std::stoul(argv[1]) : 0; 
+    const unsigned int max_refinement = (argc > 2) ? std::stoul(argv[2]) : 5;
     const std::vector<double> nu_values    = {0.001, 0.1, 10};
     const std::vector<double> U_max_values = {0.00001, 0.001, 0.1, 10};
 
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
     const double theta_output = 0.25;
 
     // Repetitions of each solve to average the timings (Sec. 5.3); 
-    const unsigned int n_repetitions = (argc > 2) ? std::stoul(argv[2]) : 1;
+    const unsigned int n_repetitions = (argc > 3) ? std::stoul(argv[3]) : 1;
 
     // Forcing term f = 0 
     const auto f = [](const Point<dim> &) { return Tensor<1, dim>(); };
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
                "t_amg_setup,t_solve,t_solve_std" << std::endl;
     }
 
-    for (unsigned int i = 0; i <= max_refinement; ++i)
+    for (unsigned int i = min_refinement; i <= max_refinement; ++i)
     {
         for (const double nu_value : nu_values)
         {

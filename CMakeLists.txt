@@ -18,6 +18,10 @@ endif()
 add_executable(stokes src/main.cpp src/Stokes.cpp)
 deal_ii_setup_target(stokes)
 
+# Diffusion solver (dataset of Sec. 6.4)
+add_executable(diffusion src/main_diffusion.cpp src/Diffusion.cpp)
+deal_ii_setup_target(diffusion)
+
 # `make run`
 set(NPROCS 1 CACHE STRING "Number of MPI processes used by `make run`")
 find_program(MPIEXEC_PROGRAM NAMES mpiexec mpirun)
