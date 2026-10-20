@@ -13,14 +13,11 @@
 
 static constexpr unsigned int dim = Diffusion::dim;
 
-// Diffusion coefficient of the paper (Sec. 6.4, Algorithm 5): the square (-1, 1)^2 is split
-// into size^mode tiles, i.e. size stripes along x (mode = 1) or a size x size checkerboard
-// (mode = 2), and mu = 10^eps[k] on tile k.
 struct Pattern
 {
     unsigned int size;
     unsigned int mode;
-    std::vector<double> eps; // size^mode exponents
+    std::vector<double> eps; 
 
     double operator()(const Point<dim> &p) const
     {
@@ -90,7 +87,7 @@ int main(int argc, char *argv[])
         options[arg.substr(0, equal)] = arg.substr(equal + 1);
     }
 
-    // Q1 elements (Sec. 5)
+    // Q1 elements (Section 3)
     const unsigned int degree = 1;
 
     // Dataset (Section 6.4)

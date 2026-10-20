@@ -1,4 +1,0 @@
-/shared/Machine-Learning-Accelerated-Solver-for-Complex-Fluid-Problems/build/CMakeFiles/stokes.dir
-/shared/Machine-Learning-Accelerated-Solver-for-Complex-Fluid-Problems/build/CMakeFiles/run.dir
-/shared/Machine-Learning-Accelerated-Solver-for-Complex-Fluid-Problems/build/CMakeFiles/edit_cache.dir
-/shared/Machine-Learning-Accelerated-Solver-for-Complex-Fluid-Problems/build/CMakeFiles/rebuild_cache.dir

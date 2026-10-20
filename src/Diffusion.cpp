@@ -136,9 +136,7 @@ void Diffusion::assemble()
         for (unsigned int q = 0; q < n_q; ++q)
         {
             const double mu_loc        = mu(fe_values.quadrature_point(q));
-            const double sigma_loc     = sigma(fe_values.quadrature_point(q));
             const double f_loc         = f(fe_values.quadrature_point(q));
-            const Tensor<1, dim> b_loc = b(fe_values.quadrature_point(q)); 
             
             // Checkpoint system assembly
             for (unsigned int i = 0; i < dofs_per_cell; ++i)
@@ -151,17 +149,6 @@ void Diffusion::assemble()
                                         fe_values.shape_grad(i, q) * 
                                         fe_values.shape_grad(j, q) * 
                                         fe_values.JxW(q);
-
-                    // Transport
-                    cell_matrix(i, j) += b_loc * 
-                                         fe_values.shape_grad(j, q) * 
-                                         fe_values.shape_value(i, q) * 
-                                         fe_values.JxW(q); 
-
-                    cell_matrix(i, j) += sigma_loc *                 
-                                        fe_values.shape_value(i, q) *
-                                        fe_values.shape_value(j, q) *
-                                        fe_values.JxW(q);
                 }
 
                 cell_rhs(i) += f_loc *                       
@@ -169,42 +156,10 @@ void Diffusion::assemble()
                                fe_values.JxW(q);
             }
         }
-        
-        // Neumann Boundary Conditions
-        if (cell->at_boundary())
-        {
-            for (unsigned int face_number = 0; face_number < cell->n_faces(); ++face_number)
-            {
-                if (cell->face(face_number)->at_boundary())
-                {
-                    const types::boundary_id face_id = cell -> face(face_number) -> boundary_id(); 
-
-                    if(neumann.count(face_id))
-                    {
-                        fe_values_boundary.reinit(cell, face_number);
-
-                        const Function<dim>* boundary_function = neumann[face_id]; 
-
-                        for (unsigned int q = 0; q < n_q_faces; ++q)
-                        {
-                            double h_loc = boundary_function -> value(fe_values_boundary.quadrature_point(q));
-                            for (unsigned int i = 0; i < dofs_per_cell; ++i)
-                            {
-                                cell_rhs(i) += h_loc * 
-                                               fe_values_boundary.shape_value(i, q) * 
-                                               fe_values_boundary.JxW(q);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
 
         cell->get_dof_indices(dof_indices);
 
-        // Dirichlet conditions (constraints built in setup()): matrix and rhs together, so that
-        // the non-homogeneous boundary data end up in the rhs and the matrix stays symmetric.
+        // Dirichlet conditions
         constraints.distribute_local_to_global(cell_matrix, cell_rhs, dof_indices, system_matrix, system_rhs);
     }
 
@@ -214,9 +169,6 @@ void Diffusion::assemble()
 
 Diffusion::SolverResult Diffusion::solve(const double theta, const unsigned int n_repetitions, const unsigned int max_iterations)
 {
-    // Stopping criterion of the paper (Sec. 5): relative residual in the euclidean norm,
-    //   N_it = min{k : ||r^(k)|| / ||r^(0)|| < 1e-8},  r^(k) = b - A x^(k),
-    // or not converged after max_iterations iterations (rho is then computed at k = max_iterations).
     const double tolerance = 1.0e-8;
 
     SolverResult result;

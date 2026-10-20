@@ -10,7 +10,7 @@ void DRT::setup()
 
         if(selfMesh)
         {
-            GridGenerator::subdivided_hyper_cube(mesh, N_el, 0.0, 1.0, true);
+            GridGenerator::subdivided_hyper_cube(mesh, N_el, -1.0, 1.0, true);
             const std::string mesh_file_name = "mesh-" + std::to_string(N_el) + ".vtk";
             GridOut           grid_out;
             std::ofstream     grid_out_file(mesh_file_name);
