@@ -43,7 +43,8 @@
 using namespace dealii;
 
 // Stationary Stokes problem of the paper (eq. 7, Sec. 6.5), Taylor-Hood Q2-Q1,
-// solved with MINRES preconditioned by diag(1 V-cycle BoomerAMG on A, Jacobi on M_p/nu).
+// solved with MINRES preconditioned by diag(1 V-cycle BoomerAMG on A, exact M^{-1}), where
+// M is the pressure mass matrix M_h of the paper or, if scale_pressure_mass_by_nu, M_p / nu.
 class Stokes
 {
     public:
@@ -69,13 +70,15 @@ class Stokes
             const unsigned int degree_velocity_,
             const unsigned int degree_pressure_,
             const Value &nu_,
-            const VectorField &f_
+            const VectorField &f_,
+            const bool scale_pressure_mass_by_nu_ = false
         )
         : n_refinements(n_refinements_)
         , degree_velocity(degree_velocity_)
         , degree_pressure(degree_pressure_)
         , nu(nu_)
         , f(f_)
+        , scale_pressure_mass_by_nu(scale_pressure_mass_by_nu_)
         , mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
         , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
         , pcout(std::cout, mpi_rank == 0)
@@ -101,6 +104,9 @@ class Stokes
         const Value nu; // viscosity
         const VectorField f;
 
+        // Pressure block of the preconditioner: M_h as in the paper (false) or M_p / nu (true).
+        const bool scale_pressure_mass_by_nu;
+
         const unsigned int mpi_size;
         const unsigned int mpi_rank;
         ConditionalOStream pcout;
@@ -122,7 +128,7 @@ class Stokes
         AffineConstraints<double> constraints;
 
         PETScWrappers::MPI::BlockSparseMatrix system_matrix;
-        PETScWrappers::MPI::BlockSparseMatrix pressure_mass; // block (1,1) = M_p / nu, for the preconditioner
+        PETScWrappers::MPI::BlockSparseMatrix pressure_mass; // block (1,1) = M_h or M_p / nu, for the preconditioner
         PETScWrappers::MPI::BlockVector system_rhs;
 
         PETScWrappers::MPI::BlockVector solution_owned; // without ghost elements

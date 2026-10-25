@@ -60,23 +60,31 @@ class ExactSolution : public Function<dim>
 //   min_level, max_level  levels i: N_el = 16 * 2^i cells per side, h = 2 / N_el = 0.125 / 2^i
 //                         (default 0 and 7, the 8 mesh sizes of the paper; i = 7 has 4.2 million DoFs)
 //   n_patterns            random coefficients for each pair (size, mode); default 4, i.e. 72 coefficients
-//                         and, with 8 levels and 25 theta, 14400 samples (about the 15000 of Sec. 6.4.2)
-//   eps                   exponents of mu uniform in (-eps, eps); default 8, so that two values of mu differ
-//                         at most by 10^16 (double precision). The paper uses 20: then CG breaks down on some
-//                         checkerboards (no theta converges, and in Debug mode deal.II stops at the breakdown)
-//   max_iterations        CG iterations after which a solve stops as not converged (default 1000)
+//                         and, with 8 levels and 25 theta, 14400 samples (about the 15000 of Sec. 6.4.2).
+//                         The full dataset of Sec. 6.4.3 (about 200000 samples) is the union of the runs with
+//                         seed = 0, ..., 13 (1008 coefficients, 201600 samples)
+//   eps                   exponents of mu uniform in (-eps, eps); default 20, as in the paper. With 20, CG does
+//                         not converge for any theta on some misaligned checkerboards (size 7, 9, 10): these
+//                         solves are kept, with converged = 0 (in Debug mode deal.II stops at the breakdown)
+//   max_iterations        CG iterations after which a solve stops as not converged (default 100; the paper does
+//                         not give N_max, and the converged solves take at most about 25 iterations)
 //   n_repetitions         repetitions of each solve, to average the timings (default 1)
 //   seed                  seed of the random coefficients (default 0)
 //   prefix                output files <prefix>_results.csv and <prefix>_patterns.csv (default diffusion)
 // Arguments without '=' are left to PETSc (e.g. -log_view).
+// The program runs in serial, as in the paper: with more MPI processes the coarsening of BoomerAMG
+// and the numbering of the DoFs would depend on the partition.
 int main(int argc, char *argv[])
 {
     Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
     const bool is_root = (Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0);
 
+    AssertThrow(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) == 1,
+                ExcMessage("The dataset is generated in serial, as in the paper: run without mpirun."));
+
     std::map<std::string, std::string> options = {
-        {"min_level", "0"}, {"max_level", "7"}, {"n_patterns", "4"}, {"eps", "8"},
-        {"max_iterations", "1000"}, {"n_repetitions", "1"}, {"seed", "0"}, {"prefix", "diffusion"}};
+        {"min_level", "0"}, {"max_level", "7"}, {"n_patterns", "4"}, {"eps", "20"},
+        {"max_iterations", "100"}, {"n_repetitions", "1"}, {"seed", "0"}, {"prefix", "diffusion"}};
     for (int k = 1; k < argc; ++k)
     {
         const std::string arg   = argv[k];
@@ -151,6 +159,10 @@ int main(int argc, char *argv[])
     {
         const unsigned int N_el = N_el_0 << i; // 16 * 2^i
 
+        // h of the paper (Tables 2-3: 1.25e-1, ..., 9.77e-4), i.e. the side of the cells, not their
+        // diameter; -log2(h) = 3 + i is an input of the ANN.
+        const double h = 2.0 / N_el;
+
         for (unsigned int p = 0; p < patterns.size(); ++p)
         {
             // One id per matrix (seed, level, coefficient), the same in every run: it links the
@@ -202,7 +214,7 @@ int main(int argc, char *argv[])
                     std::cout << "  rho = " << rho << std::endl;
                     std::ostringstream row;
                     row << problem_id << ',' << seed << ',' << p << ',' << i << ',' << N_el << ','
-                        << problem.get_h() << ',' << problem.n_dofs() << ','
+                        << h << ',' << problem.n_dofs() << ','
                         << pattern.size << ',' << pattern.mode << ',' << theta << ','
                         << result.converged << ',' << result.iterations << ','
                         << rho << ','

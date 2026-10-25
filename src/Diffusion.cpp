@@ -16,16 +16,26 @@ void Diffusion::setup()
         // both meshes are built in serial, partitioned and then distributed.
         Triangulation<dim> mesh_serial;
 
-        // Square (-1, 1)^2 of the paper, N_el x N_el cells. colorize = true gives the
-        // boundary ids 0 (x = -1), 1 (x = 1), 2 (y = -1), 3 (y = 1).
-        GridGenerator::subdivided_hyper_cube(mesh_serial, N_el, -1.0, 1.0, true);
+        // Square (-1, 1)^2 of the paper, refined globally into N_el x N_el cells (N_el = 2^n).
+        // Global refinement numbers the cells, and so the DoFs, hierarchically (Z-order), which
+        // gives the sparsity pattern of Fig. 6 of the paper (a subdivided_hyper_cube would number
+        // them by rows). The order matters: it is the order of the Gauss-Seidel smoother of
+        // BoomerAMG and of the view of the matrix. colorize = true gives the boundary ids
+        // 0 (x = -1), 1 (x = 1), 2 (y = -1), 3 (y = 1).
+        unsigned int n_refinements = 0;
+        while ((1u << n_refinements) < N_el)
+            ++n_refinements;
+        AssertThrow((1u << n_refinements) == N_el, ExcMessage("N_el must be a power of 2."));
+
+        GridGenerator::hyper_cube(mesh_serial, -1.0, 1.0, true);
+        mesh_serial.refine_global(n_refinements);
 
         GridTools::partition_triangulation(mpi_size, mesh_serial);
 
         const auto construction_data = TriangulationDescription::Utilities::create_description_from_triangulation(mesh_serial, MPI_COMM_WORLD);
         mesh.create_triangulation(construction_data);
 
-        // h = maximum cell diameter, as in Stokes (log2(h) is an input of the ANN).
+        // h = maximum cell diameter (the dataset uses h = 2 / N_el, as the paper: see main_diffusion.cpp).
         double h_local = 0.0;
         for (const auto &cell : mesh.active_cell_iterators())
             if (cell->is_locally_owned())

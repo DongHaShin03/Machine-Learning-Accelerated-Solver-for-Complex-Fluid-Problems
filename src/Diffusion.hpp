@@ -47,7 +47,7 @@ using namespace dealii;
 
 // Diffusion-reaction-transport problem -div(mu grad u) + b . grad u + sigma u = f (same
 // assembly as DRT), set up for the AMG dataset of the paper (Sec. 5 and 6.4):
-// - Q_r elements on quadrilaterals (Q1 in the paper); self-generated mesh on (-1, 1)^2;
+// - Q_r elements on quadrilaterals (Q1 in the paper); mesh on (-1, 1)^2 refined globally;
 // - PETSc linear algebra, CG preconditioned by one BoomerAMG V-cycle with strong threshold theta;
 // - Dirichlet conditions through AffineConstraints, so that the matrix stays symmetric;
 // - stopping criterion and approximate convergence factor rho of the paper.
@@ -71,7 +71,7 @@ class Diffusion
             double       time_solve_std = 0.0; // standard deviation [s]
         };
 
-        // Constructor for self-generated mesh: (-1, 1)^2 with N_el x N_el square cells
+        // Constructor for self-generated mesh: (-1, 1)^2 with N_el x N_el square cells (N_el = 2^n)
         Diffusion
         (
             const unsigned int &N_el_,

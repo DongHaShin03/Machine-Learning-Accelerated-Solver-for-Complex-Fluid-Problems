@@ -5,13 +5,17 @@ Multidisciplinary Project
 
 This project builds on the paper by P.F. Antonietti, M. Caldana and L. Dede', *Accelerating Algebraic Multigrid Methods via Artificial Neural Networks*, Vietnam J. Math. 51 (2023), available in `reference/2_MD.pdf`. In the paper, a neural network chooses the AMG *strong threshold* parameter θ.
 
-For now, the code solves the steady Stokes problem of Sec. 6.5 of the paper **without a neural network**, in order to study how AMG performance depends on θ:
+For now, the code generates the two datasets of the paper **without a neural network**, in order to study how AMG performance depends on θ. Both programs run in serial, as in the paper.
+
+The steady Stokes problem of Sec. 6.5 (`stokes`):
 
 - **domain**: channel (0, 2.2) × (0, 0.41) with a cylinder of radius 0.05 centered at (0.2, 0.2);
 - **boundary conditions**: parabolic inflow velocity profile, zero velocity on the walls and on the cylinder, natural ("do-nothing") condition at the outflow;
 - **discretization**: Taylor-Hood Q2–Q1 finite elements with [deal.II](https://www.dealii.org);
-- **solver**: MINRES with a block-diagonal preconditioner, i.e. one BoomerAMG V-cycle (hypre, via PETSc) on the velocity block and Jacobi on the pressure mass matrix scaled by 1/ν;
-- **analysis**: for each mesh refinement level, viscosity ν, maximum velocity U and value of θ, the program records the number of MINRES iterations, the approximate convergence factor ρ and the timings.
+- **solver**: MINRES with the block-diagonal preconditioner diag(A, M_h) of the paper, i.e. one BoomerAMG V-cycle (hypre, via PETSc) on the velocity block and the pressure mass matrix M_h inverted exactly (inner CG); `pressure_mass=scaled` uses M_p/ν instead of M_h;
+- **analysis**: for each mesh refinement level (h = 0.14/2^i), viscosity ν, maximum velocity U and each of the 50 values of θ (3600 samples, as in the paper), the program records the number of MINRES iterations, the approximate convergence factor ρ and the timings.
+
+The diffusion problem with a tile-wise coefficient of Sec. 6.4 (`diffusion`): Q1 elements on (−1, 1)² refined globally (h = 2/N_el = 0.125/2^i, i = 0, ..., 7), μ = 10^ε on size^mode tiles with ε uniform in (−20, 20) (Algorithm 5), CG preconditioned by one BoomerAMG V-cycle, 25 values of θ. The solves that do not converge in 100 iterations are kept with `converged = 0` (with ε up to 20 this happens for every θ on some misaligned checkerboards).
 
 Two Python scripts use these results:
 
@@ -51,27 +55,38 @@ make
 From the `build/` folder:
 
 ```bash
-./stokes [max_refinement] [n_repetitions]
+./stokes [key=value ...]
 ```
 
-- `max_refinement`: maximum refinement level; the program uses i = 0, ..., `max_refinement` (default 5, as in the paper);
-- `n_repetitions`: how many times each solve is repeated to compute the mean and standard deviation of the timings (default 1). With 1 repetition the standard deviation is 0 and Figure 4 has no error bars. The iteration count and ρ do not depend on the repetitions.
+- `min_level`, `max_level`: refinement levels i = `min_level`, ..., `max_level` (default 0 and 5, as in the paper);
+- `n_repetitions`: how many times each solve is repeated to compute the mean and standard deviation of the timings (default 1). With 1 repetition the standard deviation is 0 and Figure 4 has no error bars. The iteration count and ρ do not depend on the repetitions;
+- `pressure_mass`: `paper` (M_h, default) or `scaled` (M_p/ν);
+- `output`: name of the csv file (default `results.csv`).
 
 Examples:
 
 ```bash
-./stokes 2      # i = 0, 1, 2, one repetition (quick test)
-./stokes 2 5    # i = 0, 1, 2, five repetitions per solve
-./stokes        # i = 0, ..., 5, as in the paper
-make run        # same as ./stokes (no arguments), with NPROCS MPI processes
+./stokes max_level=2                    # i = 0, 1, 2, one repetition (quick test)
+./stokes max_level=2 n_repetitions=5    # i = 0, 1, 2, five repetitions per solve
+./stokes                                # i = 0, ..., 5, as in the paper
+make run                                # same as ./stokes (no arguments)
 ```
 
-To use more MPI processes with `make run`: `cmake -DNPROCS=4 ..`, then `make run`. To also pass arguments, call `mpirun` directly, e.g. `mpirun -n 4 ./stokes 2 5`.
+The programs stop if started with more than one MPI process: in parallel, the coarsening of BoomerAMG and the numbering of the DoFs would depend on the partition.
 
-The program writes to `build/`:
+The program writes to the current folder:
 
-- `results.csv`: one row per solve, with columns `i, h, n_dofs, nu, U, theta, converged, iterations, rho, t_amg_setup, t_solve, t_solve_std`;
+- `results.csv`: one row per solve, with columns `i, h, n_dofs, nu, U, theta, converged, iterations, rho, t_amg_setup, t_solve, t_solve_std` (`h` = 0.14/2^i, as in the paper);
 - `output-stokes_nu<ν>_U<U>_i<i>_*.vtu` / `.pvtu`: the solution for θ = 0.25, to be opened with ParaView.
+
+The diffusion dataset:
+
+```bash
+./diffusion                      # 72 coefficients x 8 levels x 25 theta = 14400 samples (Sec. 6.4.2)
+./diffusion seed=1 prefix=s1     # 72 other coefficients; seeds 0, ..., 13 give the ~200000 samples of Sec. 6.4.3
+```
+
+The options (`min_level`, `max_level`, `n_patterns`, `eps`, `max_iterations`, `n_repetitions`, `seed`, `prefix`) are described at the top of `src/main_diffusion.cpp`. The program writes `<prefix>_results.csv` (one row per solve, `h` = 2/N_el as in the paper) and `<prefix>_patterns.csv` (the exponents ε of each coefficient). Level 7 (4.2 million DoFs) needs about 3.5 GB of memory.
 
 ### Python dependencies
 

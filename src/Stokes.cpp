@@ -240,8 +240,9 @@ void Stokes::assemble()
                     // so that the system [A B^T; B 0] is symmetric (eq. 8).
                     cell_matrix(i, j) -= phi_p[i] * div_phi_u[j] * JxW;
 
-                    // Pressure mass matrix scaled by 1/nu (preconditioner).
-                    cell_pressure_mass_matrix(i, j) += phi_p[i] * phi_p[j] / nu_loc * JxW;
+                    // Pressure mass matrix M_h of the paper, or M_p / nu (preconditioner).
+                    cell_pressure_mass_matrix(i, j) += phi_p[i] * phi_p[j]
+                                                     * (scale_pressure_mass_by_nu ? 1.0 / nu_loc : 1.0) * JxW;
                 }
 
                 // Forcing term.
